@@ -291,7 +291,7 @@ public:
     ~callbackThread();
     void run();
 private:
-    epicsThread *pThread;
+    epicsThread thread;
     asynPortDriver *pPortDriver;
     epicsEvent shutdown;
     epicsEvent doneEvent;

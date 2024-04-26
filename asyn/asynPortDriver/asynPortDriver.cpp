@@ -905,10 +905,10 @@ paramVal* paramList::getParameter(int index)
 }
 
 callbackThread::callbackThread(asynPortDriver *portDriver) :
-    pThread(new epicsThread(*this, "asynPortDriverCallback", epicsThreadGetStackSize(epicsThreadStackMedium), epicsThreadPriorityMedium)),
+    thread(epicsThread(*this, "asynPortDriverCallback", epicsThreadGetStackSize(epicsThreadStackMedium), epicsThreadPriorityMedium)),
     pPortDriver(portDriver)
 {
-    pThread->start();
+    thread.start();
 }
 
 callbackThread::~callbackThread()
@@ -932,8 +932,6 @@ void callbackThread::run()
         pPortDriver->callParamCallbacks(addr, addr);
     }
     epicsMutexUnlock(pPortDriver->mutexId);
-    delete pThread;
-    pThread = NULL;
     doneEvent.signal();
 }
 
