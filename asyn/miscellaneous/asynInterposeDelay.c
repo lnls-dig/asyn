@@ -2,7 +2,7 @@
 /***********************************************************************/
 
 /* Interpose for devices where each written char needs a delay
- * before sending the next char.
+ * before sending the next char, or a delay before sending the next message.
  *
  * Author: Dirk Zimoch
  */
@@ -26,7 +26,7 @@ typedef struct interposePvt {
     asynInterface option;
     asynOption    *pasynOptionDrv;
     void          *optionPvt;
-    double        delay;
+    double        delay, msg_delay;
 }interposePvt;
 
 /* asynOctet methods */
@@ -49,6 +49,7 @@ static asynStatus writeIt(void *ppvt, asynUser *pasynUser,
         data+=n;
     }
     *nbytesTransfered = transfered;
+    epicsThreadSleep(pvt->msg_delay);
     return status;
 }
 
@@ -139,6 +140,9 @@ getOption(void *ppvt, asynUser *pasynUser,
     if (epicsStrCaseCmp(key, "delay") == 0) {
         epicsSnprintf(val, valSize, "%g", pvt->delay);
         return asynSuccess;
+    } else if (epicsStrCaseCmp(key, "msg_delay") == 0) {
+        epicsSnprintf(val, valSize, "%g", pvt->msg_delay);
+        return asynSuccess;
     }
     if (pvt->pasynOptionDrv)
         return pvt->pasynOptionDrv->getOption(pvt->optionPvt,
@@ -151,11 +155,17 @@ static asynStatus
 setOption(void *ppvt, asynUser *pasynUser, const char *key, const char *val)
 {
     interposePvt *pvt = (interposePvt *)ppvt;
-    if (epicsStrCaseCmp(key, "delay") == 0) {
-        if(sscanf(val, "%lf", &pvt->delay) != 1) {
+    if (epicsStrCaseCmp(key, "delay") == 0 || epicsStrCaseCmp(key, "msg_delay") == 0) {
+        double tmp;
+        if(sscanf(val, "%lf", tmp) != 1) {
             epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize,
                 "Bad number %s", val);
             return asynError;
+        }
+        if (epicsStrCaseCmp(key, "delay") == 0) {
+            pvt->delay = tmp;
+        } else {
+            pvt->msg_delay = tmp;
         }
         return asynSuccess;
     }
@@ -173,7 +183,7 @@ static asynOption option = {
 
 
 ASYN_API int
-asynInterposeDelay(const char *portName, int addr, double delay)
+asynInterposeDelay(const char *portName, int addr, double delay, double msg_delay)
 {
     interposePvt *pvt;
     asynStatus status;
@@ -208,6 +218,7 @@ asynInterposeDelay(const char *portName, int addr, double delay)
         pvt->pasynOptionDrv = (asynOption *)poptionasynInterface->pinterface;
     }
     pvt->delay = delay;
+    pvt->msg_delay = msg_delay;
     return 0;
 }
 
@@ -215,15 +226,16 @@ asynInterposeDelay(const char *portName, int addr, double delay)
 static const iocshArg iocshArg0 = {"portName", iocshArgString};
 static const iocshArg iocshArg1 = {"addr", iocshArgInt};
 static const iocshArg iocshArg2 = {"delay(sec)", iocshArgDouble };
+static const iocshArg iocshArg3 = {"msg_delay(sec)", iocshArgDouble };
 static const iocshArg *iocshArgs[] =
-    {&iocshArg0, & iocshArg1, &iocshArg2};
+    {&iocshArg0, & iocshArg1, &iocshArg2, &iocshArg3};
 
 static const iocshFuncDef asynInterposeDelayFuncDef =
-    {"asynInterposeDelay", 3, iocshArgs};
+    {"asynInterposeDelay", 4, iocshArgs};
 
 static void asynInterposeDelayCallFunc(const iocshArgBuf *args)
 {
-    asynInterposeDelay(args[0].sval, args[1].ival, args[2].dval);
+    asynInterposeDelay(args[0].sval, args[1].ival, args[2].dval, args[3].dval);
 }
 
 static void asynInterposeDelayRegister(void)
