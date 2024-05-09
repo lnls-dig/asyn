@@ -216,6 +216,7 @@ asynInterposeDelay(const char *portName, int addr, double delay, double msg_dela
         }
     } else {
         pvt->pasynOptionDrv = (asynOption *)poptionasynInterface->pinterface;
+        pvt->optionPvt = poptionasynInterface->drvPvt;
     }
     pvt->delay = delay;
     pvt->msg_delay = msg_delay;
