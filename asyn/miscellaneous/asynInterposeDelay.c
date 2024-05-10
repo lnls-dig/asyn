@@ -38,7 +38,7 @@ static asynStatus writeIt(void *ppvt, asynUser *pasynUser,
     size_t transfered = 0;
     asynStatus status = asynSuccess;
 
-    while (transfered < numchars) {
+    if (pvt->delay != 0) while (transfered < numchars) {
         /* write one char at a time */
         status = pvt->pasynOctetDrv->write(pvt->octetPvt,
             pasynUser, data, 1, &n);
@@ -47,6 +47,9 @@ static asynStatus writeIt(void *ppvt, asynUser *pasynUser,
         epicsThreadSleep(pvt->delay);
         transfered+=n;
         data+=n;
+    } else {
+        status = pvt->pasynOctetDrv->write(pvt->octetPvt,
+            pasynUser, data, numchars, &transfered);
     }
     *nbytesTransfered = transfered;
     epicsThreadSleep(pvt->msg_delay);
