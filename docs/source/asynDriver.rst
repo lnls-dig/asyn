@@ -3152,7 +3152,7 @@ sending the next. Some poorly designed devices require this. It is started by th
 shell command:
 ::
 
-  asynInterposeDelay port addr delay
+  asynInterposeDelay port addr delay msg_delay
 
 where
 
